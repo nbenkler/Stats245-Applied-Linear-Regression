@@ -1,0 +1,183 @@
+---
+title: 'Case study #3'
+author: "Noam Benkler"
+date: "May 20, 2018"
+output: github_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(stargazer)
+library(tidyr)
+library(car)
+library(GGally)
+library(MASS)
+library(readxl)
+library(car)
+library(Sleuth3)
+library(ggformula)
+```
+
+```{r}
+nes <- read.csv("http://aloy.rbind.io/data/NES.csv")
+View(nes)
+```
+
+```{r}
+nes.lm <- glm(dem ~ year + region + union + income + educ + gender + log(age) + race, data = nes)
+summary(nes.lm)
+
+gf_histogram( ~age, data = nes)
+
+non.lm <- glm(dem ~ year + income + educ + log(age) + race, data = nes)
+summary(non.lm)
+
+nes1980 <- nes %>% filter (year == "1980")
+I980.lm <- glm(dem ~ region + union + income + educ + gender + age + race, data = nes1980)
+summary(I980.lm)
+
+nes2000 <- nes %>% filter (year == "2000")
+oo0.lm <- glm(dem ~ region + union + income + educ + gender + age + race, data = nes2000)
+summary(oo0.lm)
+```
+
+```{r}
+nes_glm <- glm(dem ~ year*gender, data = nes, family = binomial)
+summary(nes_glm)
+```
+
+```{r}
+nes$genderFactor <- "0"
+nes$genderFactor[nes$gender == "male"] = "1"
+
+nes$genderFactor <- factor(nes$genderFactor)
+View(nes)
+```
+
+```{r}
+prop.table(table(nes$dem, nes$gender))
+prop.table(table(nes1980$dem, nes1980$gender))
+prop.table(table(nes2000$dem, nes2000$gender))
+```
+```{r}
+
+```
+
+
+
+```{r}
+prop.table(table(nes$dem, nes$region))
+prop.table(table(nes1980$dem, nes1980$region))
+prop.table(table(nes2000$dem, nes2000$region))
+```
+
+
+```{r}
+prop.table(table(nes$dem, nes$union))
+prop.table(table(nes1980$dem, nes1980$union))
+prop.table(table(nes2000$dem, nes2000$union))
+```
+
+
+```{r}
+base.lm <- glm(dem ~ income + educ + log(age) + race, data = nes)
+summary(base.lm)
+
+gender.lm <-glm(dem ~ gender + income + educ + log(age) + race, data = nes)
+summary(gender.lm)
+
+region.lm <- glm(dem ~ region + income + educ + log(age) + race, data = nes)
+summary(region.lm)
+
+union.lm <- glm(dem ~ union + income + educ + log(age) + race, data = nes)
+summary(union.lm)
+
+gendery.lm <-glm(dem ~ gender*year + income + educ + log(age) + race, data = nes)
+summary(gender.lm)
+
+regiony.lm <- glm(dem ~ region*year + income + educ + log(age) + race, data = nes)
+summary(region.lm)
+
+uniony.lm <- glm(dem ~ union*year + income + educ + log(age) + race, data = nes)
+summary(union.lm)
+```
+
+```{r}
+anova(base.lm, gender.lm, test="F")
+
+anova(base.lm, region.lm, test="F")
+
+anova(base.lm, union.lm, test="F")
+
+anova(gender.lm, gendery.lm, test="F")
+
+anova(region.lm, regiony.lm, test="F")
+
+anova(union.lm, uniony.lm, test="F")
+
+```
+
+
+```{r}
+new.lm <- glm(dem ~ income + educ + log(age) + race+ union*year + region*year + gender*year, data = nes)
+stargazer(new.lm, type = "text")
+anova(base.lm, new.lm, test="F")
+```
+
+```{r}
+anova(gender.lm, new.lm, test="F")
+
+anova(region.lm, new.lm, test="F")
+
+anova(union.lm, new.lm, test="F")
+
+```
+
+
+
+```{r}
+influenceIndexPlot(nes.lm)
+influenceIndexPlot(base.lm)
+influenceIndexPlot(new.lm)
+```
+
+
+```{r}
+nounion.lm <- glm(dem ~ income + educ + log(age) + race + region*year , data = nes)
+anova(nounion.lm, new.lm, test = "F")
+summary(new.lm)
+```
+
+
+```{r}
+yearnodummy.lm <-glm(dem ~ income + educ + log(age) + race+ union + region + gender + year , data = nes)
+anova(yearnodummy.lm, new.lm, test = "F")
+stargazer(yearnodummy.lm, type = "text")
+```
+
+
+```{r}
+nesNull_mod <- lm(dem ~ 1, data = nes)
+fselect <- stepAIC(nesNull_mod, 
+                   scope = list(upper = ~ year + region + union + income + educ + 
+                                  gender + log(age) + race),
+                   direction = "forward"
+                   , trace = 0)
+
+tidy(fselect)
+```
+
+
+```{r}
+nesNull_mod <- lm(dem ~ 1, data = nes)
+fselect <- stepAIC(nesNull_mod, 
+                   scope = list(upper = ~ year + region + union + income + educ + 
+                                  gender + log(age) + race),
+                   direction = "forward"
+                   , trace = 0)
+
+tidy(fselect)
+```
+

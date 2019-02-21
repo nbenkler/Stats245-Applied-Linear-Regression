@@ -1,0 +1,145 @@
+---
+title: "Math 245 HW 4"
+author: 'Name: Noam Benkler '
+date: 'I worked with: Christian Zaytoun'
+output:
+  github_document: default
+---
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment=NULL)
+
+library(Sleuth3)
+library(ggformula)
+library(dplyr)
+library(ggplot2)
+library(stargazer)
+library(broom)
+library(tidyr)
+library(GGally)
+library(car)
+library(gmodels)
+
+data(ex0914)
+?ex0914
+data(case1002)
+?case1002
+```
+
+## Problem 1 
+### (a) 
+
+```{r}
+    scatterplotMatrix(~  Talk + Bank + Walk + Heart, data = ex0914)
+```
+
+### (b)
+
+```{r}
+hearts_lm <- lm(Heart ~ Bank + Walk + Talk, data = ex0914)
+tidy(hearts_lm)
+```
+
+### (c)
+it does not appear that that variance of the residuals increases as the fitted values increase
+```{r}
+hearts.re <- augment(hearts_lm)
+gf_point(.resid ~ .fitted, data = hearts.re) %>% gf_hline(yintercept = 0)
+```
+
+### (d)
+$\widehat{\mu}(Heart | Bank) = \underset{(6.34)}{3.18} + \underset{(0.20)}{0.41 (Bank)}$
+All else held constant, for every point increase in mean time it takes bank clerks to make change for $20 average age adjusted death rates increase by 0.41 points.
+$\widehat{\mu}(Heart | Walk) = \underset{(6.34)}{3.18} + \underset{(0.20)}{0.45 Walk}$
+All else held constant, for every point increase in mean pedestrian walking speed average age adjusted death rates increase by 0.45 points.
+$\widehat{\mu}(Heart | Talk) = \underset{(6.34)}{3.18} - \underset{(0.22)}{0.18 (Talk)}$
+All else held constant, for every point increase in mean postal clerk talking speed average age adjusted death rates decrease by 0.18 points.
+
+## Problem 2
+
+### (a)
+$\widehat{\mu}(Depression | Age, Education ) = {\widehat{\beta}_0} + {\widehat{\beta}_1 Age} + {\widehat{\beta}_2 Education,i} + {\widehat{\beta}_3 Education,ii} +{\widehat{\beta}_4 Education,iii}$
+$ parameter = \beta_3-\beta_2$
+
+### (b)
+$\widehat{\mu}(Depression | Age, Education ) = {\widehat{\beta}_0} + {\widehat{\beta}_1 Age} + {\widehat{\beta}_2 Education,i} + {\widehat{\beta}_2 Education,ii} +{\widehat{\beta}_3 Education,iii}$
+$ parameter = \beta_3-\beta_2$
+
+### (c)
+$\widehat{\mu}(Depression | Age, Education ) = {\widehat{\beta}_0} + {\widehat{\beta}_1 (Age-k)^2} + {\widehat{\beta}_2 Education,i} + {\widehat{\beta}_3 Education,ii} +{\widehat{\beta}_4 Education,iii}$
+where k = some constant that stands for the mean age at which the lowest point in mean depression is reached
+
+
+## Problem 3
+
+### (a)
+  d.f. for $\sigma$ estimation = 32
+
+### (b)
+$H_o: \beta_4 = \beta_5$
+$H_a: \beta_4 \neq \beta_5$
+According to diagram 10.18 the p-value for $\beta_4 = \beta_5$ is 0.0083 which is enough for us to reject the null hypothysis that species two has the same regression as species 1
+
+### (c)
+With 95% confidence the slope for species 3 exceeds the slope for species 1 by between 0.693 and -6.481 points.
+
+```{r}
+SE = 1.761
+slope = -2.486 - 0.4083 #slope 3 - slope 1
+t.critical <- qt(.025, df = 32)
+slope + t.critical*SE
+slope - t.critical*SE
+```
+
+
+
+## Problem 4
+
+$ F = \frac{MSModel}{MSResid} =  \frac{\frac{2.384}{2}}{0.18741}=6.362$
+p-value = 0.8596
+```{r}
+pf(6.362, 4,2)
+```
+
+## Problem 5
+
+### (a)
+```{r}
+case.lm <- lm(log(Energy) ~ log(Mass) + Type, data = case1002)
+stargazer(case.lm, type = "text")
+```
+$\widehat{\mu}(log(Energy) | log(Mass), Species) = \underset{(0.150)}{-1.498} + \underset{(0.045)}{0.815(bats:e)}$
+
+$\widehat{\mu}(log(Energy) | log(Mass), Species) = \underset{(0.150)}{-1.498} - \underset{(0.203)}{0.079(bats:non-e)}$
+
+$\widehat{\mu}(log(Energy) | log(Mass), Species) = \underset{(0.150)}{-1.498} + \underset{(0.158)}{0.024(birds:non-e)}$
+
+
+### (b)
+$\widehat{\mu}(log(Energy) | log(Mass), Species ) = {\widehat{\beta}_0} + {\widehat{\beta}_1 log(Mass)} + {\widehat{\beta}_2 (Bats:non-e)} + {\widehat{\beta}_3 (Birds:non-e)} +{\widehat{\beta}_4 (Bats:e)}$
+$H_0: \beta_3 = \beta_4 $
+$H_a: \beta_3 \neq \beta_4 $
+There is sufficient evidence to reject the $H_0$ that $\beta_3 = \beta_4$.
+```{r}
+estimable(case.lm, c(0, 1, -1, 0))
+```
+
+
+### (c)
+$\widehat{\mu}(log(Energy) | log(Mass), Species ) = {\widehat{\beta}_0} + {\widehat{\beta}_1 log(Mass)} + {\widehat{\beta}_2 (Bats:non-e)} + {\widehat{\beta}_3 (Birds:non-e)} +{\widehat{\beta}_4 (Bats:e)}$
+$H_0: \beta_2 = \beta_3 $
+$H_a: \beta_2 \neq \beta_3 $
+```{r}
+estimable(case.lm, c(0, 0, -1, 1))
+```
+Comparing parameters, we observe a p-value of 0.384. Therefore we can not reject the null hypothesis that non-echolocating bats have different log energy outputs than non-
+echolocating birds.
+
+### (d)
+```{r}
+
+case_lm <- augment(case.lm)
+gf_point(log(Energy) ~ log(Mass), data = case1002, color = ~Type, shape ~Type) %>%
+gf_lm(.fitted ~ log.Mass., data= case_lm) %>% gf_refine(scale_color_discrete()) %>%
+  gf_labs(x="Mass(g)", y = "Energy(kJ)")
+```
+

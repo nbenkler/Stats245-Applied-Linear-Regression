@@ -1,0 +1,260 @@
+---
+title: 'HW #6'
+author: "Noam Benkler"
+date: "I worked with: Christian Zaytoun"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(stargazer)
+library(tidyr)
+library(car)
+library(GGally)
+library(MASS)
+library(readxl)
+library(car)
+library(Sleuth3)
+library(ggformula)
+```
+
+#Problem 1
+
+```{r}
+medschool <- read.csv("http://aloy.rbind.io/data/medschool.csv")
+```
+(a) Fit the logistic regression of acceptance status on MCAT score. Report the fitted logistic regression model (logit(πb) = · · ·).
+```{r}
+acc_mod <- glm(Acceptance ~ MCAT, data = medschool, family = binomial)
+preds<- predict(acc_mod)
+preds
+preds_orig <- predict(acc_mod, type = "response")
+preds_orig
+```
+
+(b) For somebody who scored 30 on the MCAT, find the probability they were accepted.
+
+ A 30 on the MCAT will give you a 79.8% chance of being accepted. 
+
+(c) For somebody who scored 30 on the MCAT, find the odds of being accepted (to not being accepted).
+
+$e^{1.372} = 3.94$ The odds of being accepted to not being accepted are 3.94. Therefore you are 3.94 times more likely to be accepted than denied.
+
+(d) Compare the odds of acceptance for somebody who scored a 35 to somebody who scored a 30 on the MCAT and give a sentence interpreting this number.
+$e^{1.372} = 3.94$ The odds of being accepted with score a 35 are the same as those with a score of 30. In both scores you are 3.94 times more likely to be accepted than denied.
+
+(e) Interpret the coefficient of MCAT in your model (in terms of odds).
+Fore each adittional point you score on the MCAT you increase your chances of acceptance by 0.246 times.
+```{r}
+coef(acc_mod)
+```
+
+
+(f) Find a 95% confidence interval for the MCAT coefficient and give a sentence interpreting this interval in context.
+A 1 point increase in MCAT score is assosiated with a multiplicative change in the log(odds) of accaptance of between 0.090 and 0.441 times
+```{r}
+confint(acc_mod, level = .95) 
+```
+
+
+#Problem 2
+a. what are the estimated probabilities of survival for men and women of ages 25 and 50?
+$logit(M_{25}) = 1.6 -(0.078)*25.......M_{25}=exp[1.6-(0.078)*25]=\frac{e^{-0.35}}{1+e^{-0.35}}= 0.413$ 
+$logit(M_{50}) = 1.6 -(0.078)*50.......M_{50}=exp[1.6-(0.078)*50]=\frac{e^{-2.3}}{1+e^{-2.3}}=0.091 $ 
+
+$logit(W_{25}) = 3.2 -(0.078)*25.......W_{25}=exp[3.2-(0.078)*25]=\frac{e^{-1.25}}{1+e^{-1.25}}= 0.777$
+$logit(W_{50}) = 3.2 -(0.078)*50.......W_{50}=exp[3.2-(0.078)*50]=\frac{e^{-0.7}}{1+e^{-0.7}}=0.332$ 
+The estimated probability of survival for men at age 25 is 41.3% and at age 50 is 9.1%
+The estimated probability of survival for women at age 25 is 77.7% and at age 50 is 33.2%
+
+b. what is the age at which the estimated probability of survival is 50% (i) for women (ii) for men
+(i)For W=0.5 
+$age = \frac{3.2-logit(W)}{0.078}= \frac{3.2-logit(0.5)}{0.078}=41.025$
+The age at which the estimated probability of survival for women is 50% is about 41 years old
+(ii)For M=0.5 
+$age = \frac{1.6-logit(M)}{0.078}= \frac{1.6-logit(0.5)}{0.078}=20.51$
+The age at which the estimated probability of survival for men is 50% is about 21 years old
+
+
+#Problem 3
+###Donner Party continued (the data are in case2001). A comment in section 20.6.1 suggests that there may be a weak interaction between sex and age. In this problem, you will explore that suggestion.
+(a) Create side-by-side boxplots of age by survival status, faceted by sex using the command: gf_boxplot(Age~Status|Sex, data=...). Explain why this graph is suggestive of a possible interactive effect.
+The age ranges for survival status are very different depending on Sex which makes it suggestive of a possible interactive effect.
+```{r}
+donner <- case2001
+gf_boxplot(Age~Status|Sex, data=donner)
+```
+
+
+(b) Fit the logistic regression of survival status on age, sex and the interaction of age and sex. Give the estimated effect and standard error for the interaction term. Interpret this coefficient estimate on the odds scale.
+Age*Sex: SE: 0.09426, Estimated effect: z=1.7 on N(0,1) p-value= 0.086
+Positive survival status is e^(0.1616)= 1.17 times more likely holding both Sex and Age constant. 
+```{r}
+surv_mod <- glm(Status ~ Age+Sex, data = donner, family = binomial)
+sur_mod.interact<- glm(Status ~ Age*Sex, data = donner, family = binomial)
+
+summary(surv_mod)
+summary(sur_mod.interact)
+
+```
+
+
+(c) Conduct a drop-in-deviance (i.e. likelihood ratio) test for the interaction term. Give the p-value for this test and compare it to the p-value for the Wald test. Does your conclusion about the interaction term change substantially? Explain. (Moral: as noted in comment 1 on pages 616-617, you should trust the drop in deviance test more than the Wald test.)
+There is a difference in the p-values given by the two tests, and when a difference in p-values for the Deviance and Walds test is present, we should consider the deviance test more reliable. 
+```{r}
+anova(sur_mod.interact, surv_mod, test= "Chisq")
+```
+P-value for deviance: 0.048
+p-value for Wald: 0.086
+
+
+
+(d) What is the estimated change in the odds of survival for a one year increase in age for females? Compute a 95% confidence interval for this effect and interpret the interval. (Use the model with the interaction term to answer this question.)
+The estimated change in odds of survival for a one year increase in age for females is e^(-0.194)= 0.823 or 82.3% 
+We are 95% confident that the estimated change in odds of survival for a one year increase in age for females is between 0.694 times and 0.978 times as likely. 
+```{r}
+beta_age <- coef(sur_mod.interact)[2]
+se_age <- sqrt(vcov(sur_mod.interact)[2,2])
+exp(beta_age + c(-1, 1) * qnorm(.975) * se_age)
+```
+
+(e) Compute and interpret the odds ratio for survival for females vs. males who are all 30 years old. Repeat this calculation and interpretation for females vs. males who are 40 years old.
+$logit(M_{30}) = 1.6 -(0.078)*30.......M_{30}=exp[1.6-(0.078)*30]=\frac{e^{2.487}}{1+e^{2.487}}= 0.923$ 
+$logit(M_{40}) = 1.6 -(0.078)*40.......M_{40}=exp[1.6-(0.078)*40]=\frac{e^{-1.487}}{1+e^{-2.3}}=0.184 $ 
+
+$logit(W_{30}) = 3.2 -(0.078)*30.......W_{30}=exp[3.2-(0.078)*30]=\frac{e^{0.89}}{1+e^{0.89}}= 0.71$
+$logit(W_{40}) = 3.2 -(0.078)*40.......W_{40}=exp[3.2-(0.078)*40]=\frac{e^{0.11}}{1+e^{0.11}}=0.527$ 
+
+$\frac{M_{30}}{W_{30}}=\frac{0.923}{0.71}=1.3$ Men are 1.3 times as likely to survive at age 30 than women 
+$\frac{M_{40}}{W_{40}}=\frac{0.184}{0.527}=0.349$ Men are 0.349 times as likely to survive at age 40 as women
+
+#Problem 4
+###Chapter 20, exercise 12 (a), (c), (d), and (e) The data are in ex2012.
+
+```{r}
+DMD <- ex2012
+View(DMD)
+```
+a. Scatterplot of H v. log(CK)
+It does appear that these enzymes might be useful predictors of whether a woman is a carrier. 
+```{r}
+gf_point(H ~ log(CK), shape = ~ Group, color = ~ Group, data = DMD)
+```
+
+b. Fit logistic regression of carrier on CK and CK-squared. Does the CK term differ significantly from 0? Next fit logistic regression of carrier on log(CK) and $log(CK)^2$ does the term differ significantly from 0? Which scale seems more appropriate for CK?
+ +  i) the CK term does significantly differ from 0 in the original logged model
+ +  ii) the log(CK) term does not significantly differ from 0 in the second logged model
+ +  iii) I believe the original scale seems more appropriate for CK
+```{r}
+ck_mod <- glm(Group ~ CK+I(CK^2), data = DMD, family = binomial)
+cklog_mod <- glm(Group ~ log(CK)+I((log(CK))^2), data = DMD, family = binomial)
+stargazer(ck_mod, cklog_mod, type = "text")
+```
+
+c. fit the logistic regression of carrier on log(CK) and H. Report coefficients and standard errors. 
+Coefficients and Standard errors are reported in the table below in the form $ \underset{Standard \space Error}{Coefficient} $
+```{r}
+ckH_mod <- glm(Group ~ log(CK)+H, data = DMD, family = binomial)
+stargazer(ckH_mod, type = "text")
+```
+
+d. Carry out a drop-in-deviance test for the hypothesis that neither log(CK) nor H are useful predictors of whether a woman is a carrier
+The p-values from our drop in deviance test show us that neither log(CK) nor H are useful predictors of whether a woman is a carrier
+```{r}
+ck_mod1 <- glm(Group ~ CK + log(CK) + H, data = DMD, family = binomial)
+anova(ckH_mod, surv_mod, test= "Chisq")
+```
+
+
+e. Typical values of CK and H are 80 and 85. Suppose that a suspected carrier has values of 300 and 100. What are the odds that she is a carrier relative to the odds that a woman with with typical values (80 to 85) is a carrier?
+
+$28.913 - 4.02(log{CK})-0.136(H)=28.913 - 4.02(ln{80})-0.136(85)=28.913 - 6.056=22.857$
+$\frac{e^{22.857}}{1+e^{22.857}}\approx 1 $
+$28.913 - 4.02(ln{300})-0.136(100)=28.913 - 9.329=19.384$
+$\frac{e^{19.384}}{1+e^{19.384}}\approx 1 $
+by this model there is no significant difference between the odds a female with 80,85 (CK,H) values and the odds a female with 300,100 (CK,H) values is a carrier.
+
+
+#Problem 5
+###Sociologists are interested in the factors that determine whether or not a released prisoner will return to prison (recidivism). A data set for this study included the variables:
+####• Y = backinprison (yes=1, no=0)
+####• alcohol - user (yes=1, no=0)
+####• drugs - user (yes=1, no=0)
+####• married (yes=1, no=0)
+####• felon - felony (yes=1, no=0)
+####• priors - number of prior convictions
+####• education (1-19)
+####• age (years)
+####• timeserved (months)
+
+####Coefficients:
+####              Estimate    Std. Error     z value     Pr(>|z|)
+####(Intercept)     0.511714    0.349697      1.463       0.14338
+####alcohol         0.451906    0.144920      3.118       0.00182 **
+####drugs           0.229176    0.131670      1.741       0.08177 .
+####married         -0.230532   0.138047      -1.670      0.09493 .
+####felon           -0.382262   0.145663      -2.624      0.00868 **
+####priors          0.129057    0.024325      5.305       1.12e-07 ***
+####education       -0.022940   0.025180      -0.911      0.36227
+####age             -0.046499   0.007600      -6.119      9.44e-10 ***
+####timeserved      0.019668    0.003528      5.574       2.49e-08 ***
+####Residual Deviance: 1803.122 on 1436 degrees of freedom
+(a) For a person who uses alcohol and drugs, is not married, not a felon, with 0 prior convictions, 12 years of education, had served 50 months , and is 20 years old, compute the odds of returning to prison.
++ His odds of returning to prison are $e^{0.971} = 2.64$. He is 2.64 times more likely to return to prison
+```{r}
+0.511714+0.451906+0.229176-(0.022940*12)-(0.046499*20)+(0.019668*50)
+```
+
+
+(b) Compute the odds of returning to prison for a 20 year old to a 35 year old, all other variables held constant and give a sentence interpreting this number.
+20 year old: $e^{-0.418} = 0.658$
+35 year old: $e^{-1.116} = 0.328$
+35y.o./20y.o.= all else held constant a 20 year old is around 2 times as likely to return to prison as a 30 year old
+```{r}
+(0.511714-0.046499*20)
+(0.511714-0.046499*35)
+```
+
+(c) Compute the 95% confidence interval for the alcohol coefficient and give an interpretation on the odds scale.
+We are 95% confident that all else held constant, the odds of recidivism for a person who uses alcohol are between 0.167 and 0.735 times as high as those of a person who does not drink alcohol
+```{r}
+0.451+1.96*0.1449
+0.451-1.96*0.1449
+```
+
+
+(d) Consider a model that includes only the alcohol, felon, priors, age and time served variables. This new model has deviance 1810.314 on 1439 degrees of freedom. Conduct a test to see which model is preferred.
+Drop in deviance = 1810.314 - 1803.122 = 7.192 on 1439- 1436 = change of 3 degrees of
+freedom.
+Chisq test for the probability that ($\chi^2 $ > 7.192) on 3 df : p-value = 0.066
+Chisq dsn on 3 df. right tail test at 7.192.
+Given a p-value > 0.05 we can conclude that the reduce model an adequate alterantive to the full model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

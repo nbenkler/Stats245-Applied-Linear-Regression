@@ -1,0 +1,127 @@
+---
+title: "Case Study 2"
+author: "Noam Benkler & Serafina Chen"
+date: "May 6, 2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggformula) # For plots
+library(broom)     # for extracting compontents of lm objects
+library(car)
+library(dplyr)
+library(MASS)
+library(stargazer)
+```
+
+
+##A. 
+```{r}
+pollution <- Sleuth3::ex1217
+tidy(pollution [, 2:17])
+```
+
+#Creat merged variables
+```{r}
+pollution$climate <- pollution$Precip + pollution$Humidity + pollution$JanTemp + pollution$JulyTemp
+pollution$pollution <- pollution$HC + pollution$NOX + pollution$SO2
+pollution$pop <- pollution$House + pollution$Density + pollution$Over65 + pollution$Sound
+pollution$wealth <- pollution$Poor + pollution$WhiteCol + pollution$NonWhite + pollution$Educ
+```
+
+#creating linear models
+```{r}
+pol.lm <- lm(Mortality ~ Precip + Humidity + JanTemp + JulyTemp + Over65 + House + Educ + Sound + Density + NonWhite + WhiteCol + Poor + HC + NOX + SO2, data = pollution)
+pol2.lm <- lm(Mortality ~ climate + pop + wealth + pollution, data = pollution)
+pollog.lm<- lm(Mortality ~ Precip + Humidity + JanTemp + JulyTemp + Over65 + House + Educ + Sound + Density + NonWhite + WhiteCol + Poor + log(HC) + log(NOX) + SO2, data = pollution)
+stargazer(pol.lm, pol2.lm, pollog.lm, type = "text")
+vif(pol.lm)
+vif(pol2.lm)
+vif(pollog.lm)
+influenceIndexPlot(pol2.lm)
+```
+
+#work with the final model
+```{r}
+final_model <- lm(Mortality ~ climate + pop + wealth + pollution, data = pollution)
+stargazer(final_model, type = "text")
+vif(final_model)
+influenceIndexPlot(final_model)
+scatterplotMatrix( ~ Mortality + climate + pop + wealth + pollution, data = pollution)
+```
+
+#tests to look for multicollinearity
+```{r}
+pairs(pollution[,2:6], pch = 19, lower.panel = NULL)
+pairs(pollution[,7:11], pch = 19, lower.panel = NULL)
+pairs(pollution[,12:16], pch = 19, lower.panel = NULL)
+pairs(pollution[,2:16], pch = 19, lower.panel = NULL)
+pairs(pollution[,7:18], pch = 19, lower.panel = NULL)
+pairs(pollution[,16:20], pch = 19, lower.panel = NULL)
+```
+
+
+
+
+#backwards elimination
+```{r}
+full_mod <-lm(Mortality ~ climate + pop + wealth + pollution, data = pollution)
+belim <- stepAIC(full_mod,
+                 scope = list(lower = ~ 1),
+                 direction = "backward" , trace = 0)
+
+tidy(belim)
+```
+
+#Forward selection
+```{r}
+null_mod <- lm(Mortality ~ 1, data = pollution)
+fselect <-
+  stepAIC(null_mod, 
+        scope = list(upper = ~ climate + pop + wealth + pollution, data = pollution),
+        direction = "forward" , trace = 0)
+
+tidy(fselect)
+```
+
+#Stepwise selection
+```{r}
+step_credit <-
+  stepAIC(null_mod,
+        scope = list(lower = ~ 1, 
+                     upper = ~ climate + pop + wealth + pollution, data = pollution),
+        direction = "both"
+        , trace=0)
+
+tidy(step_credit)
+```
+
+
+#Additional model to check if log may help
+```{r}
+pollution$climatalogical <- pollution$Precip + pollution$Humidity + pollution$JanTemp + pollution$JulyTemp
+pollution$socioeconomic <- pollution$House + pollution$Density + pollution$Over65 + pollution$Sound + pollution$Poor + pollution$WhiteCol + pollution$NonWhite + pollution$Educ
+```
+
+```{r}
+final_model2 <- lm(Mortality ~ climate + pop + wealth + log(HC) + log(NOX) + log(SO2), data = pollution)
+stargazer(final_model2, type = "text")
+vif(final_model2)
+influenceIndexPlot(final_model2)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+

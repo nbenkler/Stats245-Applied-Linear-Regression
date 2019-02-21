@@ -1,0 +1,82 @@
+---
+title: 'Stats Case Study #1'
+author: "Noam Benkler"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pm <- read.csv("http://aloy.rbind.io/data/PM.csv")
+library(ggplot2)
+library(ggformula)
+library(dplyr)
+library(broom)
+library(stargazer)
+library(Sleuth3)
+```
+
+#scatterplot of cars vs. pm levels and residuals for log grapj\h
+```{r}
+summary(pm)
+```
+
+
+```{r}
+gf_point(Particles~Cars, data = pm)
+#try to log the dep var. to make graph more linear
+gf_point(log(Particles)~Cars, data = pm) %>% gf_lm(log(Particles)~Cars, data = pm, interval = "prediction")
+
+logPm.lm <- lm(log(Particles)~Cars, data = pm)
+resid.logPm <-augment(logPm.lm)
+gf_point(.resid~.fitted, data=resid.logPm) %>% gf_hline(yintercept = 0, col = "blue", lty = 2) %>% gf_labs(x = "Fitted values", y = "Residuals", title = "Residuals vs. Fitted Values")
+gf_qq(~.std.resid, data = resid.logPm) %>% gf_qqline() %>% gf_labs(x = "N(0, 1) quantiles", y = "Standardized residuals")
+```
+
+#Tables
+```{r}
+summary(logPm.lm)
+pm <- pm %>% mutate(logPm = log(Particles))
+stargazer(pm,type = "text", title = "Summary of PM dataset", digits = 1)
+stargazer(logPm.lm, type = "text", title = "Linear Model Coefficients (standard error in parenthisis)", flip = TRUE)
+newdata = data.frame(Cars = 2000)
+predict(logPm.lm, newdata, interval="predict") 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

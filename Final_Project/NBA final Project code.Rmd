@@ -1,0 +1,221 @@
+---
+title: "Final Proj Code 2"
+author: "Noam Benkler"
+date: "May 30, 2018"
+output: github_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(ggplot2)
+library(broom)
+library(stargazer)
+library(tidyr)
+library(car)
+library(GGally)
+library(MASS)
+library(readxl)
+library(lmtest)
+library(ggformula)
+library(car)
+library(broom)
+library(tseries)
+library(orcutt)
+library(sandwich)
+library(zoo)
+library(gapminder)
+library(gap)
+library(tidyverse)
+library(RCurl)
+library(RSQLite)
+```
+
+```{r}
+NBAdata <- read.csv("finalNBAdraftdata.csv", colClasses=c("NULL", NA, "NULL", NA, NA, NA, NA, NA, NA, "NULL", "NULL", NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, "NULL", "NULL", "NULL", NA, NA))
+
+stargazer(NBAdata, type = "text", title = "Table 1: Summary Statistics of NBA Data for Players Drafted between 2010 and 2015")
+
+NBAdata <- NBAdata[-c( 252, 260, 266, 267, 268, 272, 273), ]
+```
+
+```{r}
+NBAdata %>%
+  ggplot(aes(x = Pk, y = MP)) +
+  geom_point() +
+  facet_wrap(~ Year) +
+  xlab("Pick") + 
+  ylab("Minutes Played") +
+  labs(title = "Pick in the draft to Min Played")
+
+NBAdata %>%
+  ggplot(aes(x = Pk, y = WS)) +
+  geom_point() +
+  facet_wrap(~ Year) +
+  xlab("Pick") + 
+  ylab("Minutes Played") +
+  labs(title = "Pick in the draft to Min Played")
+
+NBAdata %>%
+  ggplot(aes(x = Pk, y = WS.48)) +
+  geom_point() +
+  facet_wrap(~ Year) +
+  xlab("Pick") + 
+  ylab("Minutes Played") +
+  labs(title = "Pick in the draft to Min Played")
+
+gf_point(MP ~ Pk, data = NBAdata)
+
+gf_histogram( ~ MP, data = NBAdata, title = "Histogram of Minutes Played", xlab = "Minutes Played")
+gf_histogram( ~ Pk, data = NBAdata, title = "Histogram of Pick in the Draft", xlab = "Pick (1-60)")
+gf_histogram( ~ Age, data = NBAdata, title = "Histogram of Player Age", xlab = "Age (years)")
+
+gf_histogram( ~ Year, data = NBAdata)
+gf_histogram( ~ G, data = NBAdata)
+gf_histogram( ~ PTS, data = NBAdata,title =  "Histogram of Points Per Game", xlab = "Points Scored")
+gf_histogram( ~ TRB, data = NBAdata, title = "Histogram of Total Rebounds per Game", xlab = "Total Rebounds/game")
+gf_histogram( ~ log(TRB), data = NBAdata,title =  "Histogram of Log(Total Rebounds per Game)", xlab = "log(Total Rebounds/game)")
+gf_histogram( ~ AST, data = NBAdata, title = "Histogram of Total Assists per Game", xlab = "Total Assists/game)")
+gf_histogram( ~ log(AST), data = NBAdata, title = "Histogram of Log(Total Assists per Game)", xlab = "log(Total Assists/game)")
+gf_histogram( ~ STL, data = NBAdata, title = "Histogram of Total Steals per Game", xlab = "Total Steals/game")
+gf_histogram( ~ log(BLK), data = NBAdata,title =  "Histogram of Total Blocks per Game", xlab = "Total Blocks/game")
+gf_histogram( ~ FG., data = NBAdata)
+gf_histogram( ~ WS, data = NBAdata)
+gf_histogram( ~ WS.48, data = NBAdata)
+```
+
+```{r}
+lm1 <- lm(MP ~ Pk + Age + Pos + Year + G + PTS + TRB + AST + STL + BLK + FG. + WS + WS.48, data = NBAdata)
+stargazer(lm1, type = "text")
+vif(lm1)
+```
+
+```{r}
+null_mod <- lm(MP ~ 1, data = NBAdata)
+lm.step <- stepAIC(null_mod, scope = list(lower = ~ 1, upper = ~ Pk + Age + Pos + Year + PTS + log(TRB) + log(AST) + STL + BLK + FG. + WS + WS.48), direction = "both" , trace=0)
+tidy(lm.step)
+```
+
+
+```{r}
+new.mod <- lm(MP ~ Pk + Pos + PTS + log(TRB) + log(AST) + STL + Age, data = NBAdata)
+stargazer(new.mod, type = "text")
+summary(new.mod)
+vif(new.mod)
+influenceIndexPlot(new.mod)
+```
+
+```{r}
+tCritical = print(qt(0.005, df = 267))
+
+#conf-int for Pk
+cat("conf-int for Pk", -0.03084 -  0.01037*tCritical, "to", -0.03084 +  0.01037*tCritical )
+
+#conf-int for PosC-F
+cat("                                                              ")
+cat("conf-int for PosC-F", -0.22614 - 0.67946*tCritical, "to", -0.22614 + 0.67946*tCritical*tCritical)
+
+#conf-int for PosF
+cat("                                                              ")
+cat("conf-int for PosF", 1.55744 - 0.54430*tCritical, "to", 1.55744 + 0.54430*tCritical)
+
+#conf-int for PosF-C
+cat("                                                              ")
+cat("conf-int for PosF-C", -0.07720 - 0.62976*tCritical, "to", -0.07720 + 0.62976*tCritical)
+
+#conf-int for PosF-G
+cat("                                                              ")
+cat("conf-int for PosF-G", 2.70736 - 0.81816*tCritical, "to", 2.70736 + 0.81816*tCritical )
+
+#conf-int for PosG
+cat("                                                              ")
+cat("conf-int for PosG", 1.93656-0.74471*tCritical,"to", 1.93656+0.74471*tCritical)
+
+#conf-int for PosG-F
+cat("                                                              ")
+cat("conf-int for PosG-F", 2.81323-0.70411*tCritical, "to", 2.81323+0.70411*tCritical)
+
+#conf-int for PTS
+cat("                                                              ")
+cat("conf-int for PTS", 0.75053-0.04658*tCritical, "to", 0.75053+0.04658*tCritical)
+
+#conf-int for log(TRB)
+cat("                                                              ")
+cat("conf-int for log(TRB)", 3.88799-0.38557*tCritical, "to", 3.88799+0.38557*tCritical )
+
+#conf-int for log(AST)
+cat("                                                              ")
+cat("conf-int for log(AST)", 1.66010-0.29504*tCritical, "to", 1.66010+0.29504*tCritical)
+
+#conf-int for STL
+cat("                                                              ")
+cat("conf-int for STL", 3.19391-0.60322*tCritical, "to", 3.19391+0.60322*tCritical)
+
+#conf-int for Age
+cat("                                                              ")
+cat("conf-int for Age", 0.16777-0.10114*tCritical, "to", 0.16777+0.10114*tCritical)
+```
+
+```{r}
+gf_point(MP ~ Pk, data = NBAdata, title = "Figure 1: Average Minutes Played vs. Draft Pick", xlab = "Draft Pick (1-60)", ylab = "Minutes Played per Game") + geom_smooth(method = "lm")
+
+gf_point(.resid ~ .fitted, data = new.mod, title = "Figure 2: Residual Plot of Minutes Played to Pick in the Draft") %>% gf_hline(yintercept = 0)
+NBAdata.residplot <- augment(new.mod, NBAdata)
+NBAdata.residplot %>% ggplot(aes(.fitted, .resid, color = Pos)) +
+  geom_point() +
+  labs(x = "Fitted Values",
+       y = "Residuals",
+       title = "Residual Plot of Minutes Played to Pick in the Draft, Visualizing Position") + geom_hline(yintercept = 0)
+
+new.modqq <- augment(new.mod)
+gf_qq(~.std.resid, data = new.modqq) %>% gf_qqline() %>% gf_labs(x = "N(0, 1) quantiles", y = "Standardized residuals", title = "Figure 3: Q-Q plot for Restricted Model")
+
+gf_point(MP ~ Pk, data = NBAdata, title = "Figure 4: Plot of Minutes Played to Pick in the Draft Prediction Interval", xlab = "Pick", ylab = "Minutes Played") %>% gf_lm(MP ~ Pk, interval = "prediction")
+```
+
+
+```{r}
+#Heteroskedastisity tests for pooled model
+
+#Breusch-Pagan test
+bptest(new.mod)
+
+```
+
+```{r}
+#tests for autocorrelation
+
+#dwtest
+dwtest(new.mod)
+
+#Breusch-Godfrey Test
+bgtest(new.mod)
+
+#Runs test
+runs.test(as.factor(sign(resid(new.mod))))
+
+#correct for autocorellation
+sqrt(diag(NeweyWest(new.mod)))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

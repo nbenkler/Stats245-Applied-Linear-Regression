@@ -1,0 +1,253 @@
+---
+title: "Stats 245 HW_5"
+author: "Noam Benkler"
+date: 'I worked with: Christian Zaytoun '
+output:
+  github_document: default
+---
+```{r, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE, comment=NULL)
+
+library(Sleuth3)
+library(ggformula)
+library(dplyr)
+library(ggplot2)
+library(stargazer)
+library(broom)
+library(tidyr)
+library(GGally)
+library(car)
+library(gmodels)
+```
+
+Problem 1:
+a)
+        df    SS    MS    F   Pr(>F)
+x       3     2309  1     2   0.01     
+resid   12    1650  137.5
+
+SS/df=764.67
+MS(x)/MS(resid)=5.598
+
+b) 
+$\frac{SS(resid)}{df}=\sigma^2 $
+$\sigma^2 = \frac{1659}{12}=137.5$
+$ \sigma = \sqrt{137.5}=11.73$
+
+c) The reason having 3 df indicates a catigorical variable is a variable with only 4 observations would be far to small to indicate anything significant if the variable is quantitative, therefor it must be a catigorical variable with multiple corresponding observations.
+
+d) $R^2 = \frac{mean sq - resid mean sq}{total mean sq} = \frac{769.67-137.5}{769.67} = 0.821$
+about 82.1% of the variation in y is explained by our model
+
+e)
+$H_o: X=Y $
+$H_a: X \neq Y $
+given our p-value of 0.01 there is sufficient evidence to reject the null hypothesis that X=Y
+
+Problem 2:
+
+```{r}
+tRex<- ex1120
+```
+
+
+b)
+Slope: 1.07
+SE: 0.116
+$R^2$: 0.843
+*blue line*
+```{r}
+tRex.lm <- lm(Calcite ~ Carbonate, data = tRex)
+summary(tRex.lm)
+```
+
+
+c)
+Observation 1 appears to be an influential point according to this plot.
+```{r}
+influenceIndexPlot(tRex.lm)
+```
+
+
+d)
+
+Slope: 0.922
+SE: 0.1663
+$R^2$: 0.65
+*red line*
+```{r}
+tRex2 <- tRex[-c(1),]
+tRex2.lm <- lm(Calcite ~ Carbonate, data = tRex2)
+summary(tRex2.lm)
+```
+
+
+e)
+After considering both index plots, it is udoubtably clear that the first observation is influential. Frustratingly, however, once the first point is removed the second becomes influential. This process feels very self propogating.
+```{r}
+influenceIndexPlot(tRex.lm)
+influenceIndexPlot(tRex2.lm)
+```
+
+
+f)
+
+Slope: 0.590
+SE: 0.220
+$R^2$: 0.293
+*green line*
+```{r}
+tRex3 <- tRex[-c(1,2),]
+tRex3.lm <- lm(Calcite ~ Carbonate, data = tRex3)
+summary(tRex3.lm)
+```
+
+
+g)
+This last diagnastic plot now calls several points in to question: 18, 10 and 15.
+```{r}
+influenceIndexPlot(tRex3.lm)
+```
+ 
+
+h) The $R^2$ values decrease as we remove observations which means as we remove observations from our model the model accounts for less and less of the variance in Y. Moreover, the slope decreases when the first two observations were removed, but the slope's SE increased. This corroborates the idea that the first two observations were very inflential to our model. 
+
+i) Hiding influential points within groups of observations is easy because influence is measured on an individual basis. Because of this, a group of observations considered to be influencial will help hide an individual point's influence over a model.
+
+j)
+There is a weak and possitive linear relationship between Calcite and Carbonate isotopic compositions in cements and bones respectivly. We can see the inflduential points between 23 and 20 far away from the large cluster of data points around 26-30.
+```{r}
+gf_point(Calcite ~ Carbonate, data = tRex) %>% gf_lm(Calcite ~ Carbonate, data = tRex) %>% gf_lm(Calcite ~ Carbonate, data = tRex2, color = "red") %>% gf_lm(Calcite ~ Carbonate, data = tRex3, color = "green")
+```
+
+
+
+
+Problem 3:
+
+```{r}
+tree <- ex1122
+```
+
+a)
+It appears that transformations benefit this data set. Thoug some of the plots, appear somewhat linear when matched to population, generally it seems as though EDA transformations would be a reasonable next step.
+```{r}
+pairs(tree[,1:4], pch = 19, lower.panel = NULL)
+```
+
+
+b)
+```{r}
+tree.lm <- lm(log(Deforest)~ log(Debt) + log(Pop), data= tree)
+stargazer(tree.lm, type = "text")
+```
+
+c)
+While deforestation vs. debt has algight residuals it shows a concerning QQ-plot. Though there is not enough deviation to reject the normality of our data, the concavity in the center of the QQ-plot makes me sceptical of its normality.
+```{r}
+tree.resid <- augment(tree.lm)
+
+gf_point(.resid ~ .fitted, data = tree.resid) %>%
+  gf_hline(yintercept = 0, col = "blue", lty = 2) %>%
+  gf_labs(x = "Fitted values", y = "Residuals",
+          title = "Residuals vs. Fitted Values")
+
+gf_qq(~ .std.resid, data = tree.resid) %>%
+  gf_qqline() %>%
+  gf_labs(x = "N(0, 1) quantiles", y = "Standardized residuals")
+```
+
+d)
+The slope of our last plot shows that the effect of log(Debt) seems to be weak and negative and shows no real concerns about linearity.
+```{r}
+tree.log <- lm(log(Deforest)~ log(Debt) + log(Pop), data= tree)
+library(car)
+crPlots(tree.log)
+crPlots(tree.log, smooth = FALSE)
+crPlot(tree.log, variable = "log(Debt)")
+
+```
+
+e)
+Our Partial residuals plot above shows us that, even accounting for log(population) debt and defoerstation follows a negative trend. This means, there is not sufficient evidence to conclude that as a country's debt increase, so does the deforestation of that country. This disproves the hypothesis that the deeper a Latin America is in debt the greater effort they put into deforestation.
+
+Problem 4)
+
+```{r}
+water <- read.csv("http://aloy.rbind.io/data/water2.csv")
+```
+a)
+```{r}
+water.lm <- lm(BSAAM ~ APMAM + APSAB +APSLAKE+ OPBPC +OPRC+OPSLAKE, data = water)
+stargazer(water.lm, type = "text")
+```
+
+b)
+$R^2$ = 0.925
+```{r}
+summary(water.lm)
+```
+
+
+c)
+Linear regression on a constant leaves the intercept value. 
+```{r}
+waterInt.lm <- lm(BSAAM ~ 1 , data = water)
+summary(waterInt.lm)
+```
+
+
+
+d)
+The relationship between the response and explanitory variables range from linear to seemingly random across the board. None have particularly stron correlations and transformations are certainly recommeded. However, the relationships between some of the explanitory variables are very strong and linear.
+```{r}
+pairs(water[,1:7], pch = 19, lower.panel = NULL)
+```
+
+
+e)
+Our largest concerns are tbe is the lack of correlation between the x variables and y variables and the strong pairwise correlation between many of the X variables.
+
+f)
+```{r}
+APMAM1 <- lm(BSAAM ~ APMAM , data = water)
+summary(APMAM1)
+APSAB1 <- lm(BSAAM ~ APSAB , data = water)
+summary(APSAB1)
+APSLAKE1 <- lm(BSAAM ~ APSLAKE , data = water)
+summary(APSLAKE1)
+OPBPC1 <- lm(BSAAM ~ OPBPC , data = water)
+summary(OPBPC1)
+OPRC1 <- lm(BSAAM ~ OPRC , data = water)
+summary(OPRC1)
+OPSLAKE1 <- lm(BSAAM ~ OPSLAKE , data = water)
+summary(OPSLAKE1)
+
+```
+
+g)
+Our VIF makes it clear that we have a problem with multicollinearity, because with a VIF above 5 we should to be concerned about multicollinearity and for those above 10 we know there is a problem with multicollinearity, and 4 out of our 5 variables have VIF values above 5 and 1 of those 4 has a value above 10. problem. 
+```{r}
+vif(lm(lm(BSAAM ~ APMAM + APSAB +APSLAKE+ OPBPC +OPRC+OPSLAKE, data = water)))
+```
+
+
+h)
+```{r}
+duo.lm  <- lm(BSAAM ~ APMAM + OPRC , data = water)
+summary(duo.lm)
+```
+
+
+
+i)
+```{r}
+water$A.avg <- apply(water[,c("APMAM", "APSAB", "APSLAKE")], 1, mean) 
+water$O.avg <- apply(water[, c("OPBPC", "OPRC", "OPSLAKE")], 1, mean)
+
+tot.lm<- lm(BSAAM ~ water$A.avg + water$O.avg , data = water)
+summary(tot.lm)
+```
+
+j)
+The composite variables using the total of the two different areas appears to work the best. They appear to factor in more of the data in a clearer sense than the model using only one record from each area as a representative of the population.
